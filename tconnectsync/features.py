@@ -1,4 +1,8 @@
+import os
+from dotenv import load_dotenv
 from .secret import ENABLE_TESTING_MODES
+
+load_dotenv()
 
 """Supported synchronization features."""
 BASAL = "BASAL"
@@ -31,9 +35,31 @@ ALL_FEATURES = [
     DEVICE_STATUS,
 ]
 
-
-# These modes are not yet ready for wide use.
 if ENABLE_TESTING_MODES:
-    ALL_FEATURES += [
-        BOLUS_BG
-    ]
+    ALL_FEATURES += [BOLUS_BG]
+
+# Aliases from .env to internal constants
+ALIASES = {
+    "INSULIN": IOB,
+    "CARBS": CGM,
+    "SET_CHANGE": DEVICE_STATUS,
+    "CANNULA_CHANGE": DEVICE_STATUS,
+    "CARTRIDGE_CHANGE": DEVICE_STATUS,
+    "STATUS": DEVICE_STATUS,
+}
+
+env_features = os.getenv("FEATURES")
+
+if env_features:
+    raw_list = [f.strip().upper() for f in env_features.split(",") if f.strip()]
+    ENABLED_FEATURES = list({
+        ALIASES.get(f, f) for f in raw_list if ALIASES.get(f, f) in ALL_FEATURES
+    })
+else:
+    ENABLED_FEATURES = DEFAULT_FEATURES.copy()
+
+if ENABLE_TESTING_MODES and BOLUS_BG not in ENABLED_FEATURES:
+    ENABLED_FEATURES.append(BOLUS_BG)
+
+# Debug log to confirm what we’re loading
+print(f"🔧 FINAL ENABLED FEATURES: {ENABLED_FEATURES}")
