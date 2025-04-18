@@ -19,7 +19,7 @@ from .sync.tandemsource.choose_device import ChooseDevice as TandemSourceChooseD
 from .sync.tandemsource.process import ProcessTimeRange as TandemSourceProcessTimeRange
 from .check import check_login
 from .nightscout import NightscoutApi
-from .features import DEFAULT_FEATURES, ALL_FEATURES
+from .features import DEFAULT_FEATURES, ALL_FEATURES, ENABLED_FEATURES  # ✅ include ENABLED_FEATURES from .env
 
 try:
     from .secret import (
@@ -60,6 +60,10 @@ def parse_args(*args, **kwargs):
 def main(*args, **kwargs):
     args = parse_args(*args, **kwargs)
 
+    # ✅ Force args.features to use ENABLED_FEATURES from .env
+    args.features = ENABLED_FEATURES
+    print(f"✅ Using features from .env: {args.features}")
+
     if args.verbose:
         logging.basicConfig(
             level=logging.DEBUG,
@@ -85,7 +89,6 @@ def main(*args, **kwargs):
     if time_end < time_start:
         raise Exception('time_start must be before time_end')
 
-
     if TCONNECT_EMAIL == 'email@email.com':
         logging.warn('NO USERNAME WAS PROVIDED. Ensure you have set TCONNECT_EMAIL appropriately.')
     if TCONNECT_PASSWORD == 'password':
@@ -101,10 +104,6 @@ def main(*args, **kwargs):
     tconnect = TConnectApi(TCONNECT_EMAIL, TCONNECT_PASSWORD)
 
     nightscout = NightscoutApi(NS_URL, NS_SECRET, skip_verify=NS_SKIP_TLS_VERIFY, ignore_conn_errors=NS_IGNORE_CONN_ERRORS)
-
-    # NOT YET MIGRATED
-    # if args.check_login:
-    #     return check_login(tconnect, time_start, time_end)
 
     logging.warning("THIS VERSION OF TCONNECTSYNC READS DATA FROM TANDEM SOURCE, AND MAY CONTAIN BUGS!")
     logging.info("You may notice different behavior compared to older versions which utilized t:connect data sources.")
@@ -122,6 +121,4 @@ def main(*args, **kwargs):
         tconnectDevice = TandemSourceChooseDevice(secret, tconnect).choose()
         added, last_event_id = TandemSourceProcessTimeRange(tconnect, nightscout, tconnectDevice, pretend=args.pretend, secret=secret, features=args.features).process(time_start, time_end)
 
-        # return exit code 0 if processed events
-        sys.exit(0 if added>0 else 1)
-
+        sys.exit(0 if added > 0 else 1)
